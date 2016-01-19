@@ -1,0 +1,171 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+</head>
+
+<body>
+  <canvas id="canvas" width="300" height="300"></canvas>
+  <script>
+    var GAME = {
+      fps: 60,
+      freq: 0,
+      lastFPS: 0,
+      framesCount: 0,
+      lastDate: 0,
+      tasks: [],
+      start: function() {
+        console.log('GAME STARTED');
+
+        this.lastDate = +(new Date());
+        this.freq = Math.floor(1000 / this.fps);
+
+        this.timer = setInterval((function(self) {
+          return function() {
+            if (self.framesCount == 123) { // condition can be different
+              var miliSecondsPerFrame = (+(new Date()) - self.lastDate) / self.framesCount;
+              self.lastFPS = 1000 / miliSecondsPerFrame;
+              self.framesCount = 0;
+              self.lastDate = +(new Date());
+            }
+
+            self.framesCount++;
+
+            for (var i = 0; i < self.tasks.length; i++) {
+              self.tasks[i]();
+            }
+          }
+
+        })(this), this.freq);
+      },
+      appendTask: function(func) {
+        this.tasks.push(func);
+      },
+      stop: function() {
+        clearInterval(this.timer);
+      }
+    }
+
+    function Bubble(x, y, radius, speed, canvas, context, colour) {
+      this.x = x;
+      this.y = y;
+      this.speedX = speed;
+      this.speedY = speed;
+      this.context = context;
+      this.radius = radius;
+      this.angle = 0;
+      this.canvas = canvas;
+      this.colour = colour;
+      //this.colour = 'rgb(0, 0, 0)';
+
+      this.invertedX = 1;
+      this.invertedY = 1;
+
+      this.canvasCentreX = this.canvas.width / 2;
+      this.canvasCentreY = this.canvas.height / 2;
+
+      this.koeficientSize = 1;
+    }
+
+    Bubble.prototype.calcAngle = function(cursorX, cursorY) {
+      this.angle = Math.atan2(this.y - cursorY, this.x - cursorX);
+      //if(this.speedX < 0) this.speedX *= -1;
+      //if(this.speedY < 0) this.speedY *= -1;
+    }
+
+    Bubble.prototype.update = function() {
+      this.x -= this.speedX * Math.cos(this.angle);
+      this.y -= this.speedY * Math.sin(this.angle);
+
+      if (this.x < 0) {
+        this.x = 5;
+        this.speedX *= -1;
+      }
+
+      if (this.x > this.canvas.width - 1) {
+        this.x = canvas.width - 6;
+        this.speedX *= -1;
+      }
+
+      if (this.y < 0) {
+        this.y = 5;
+        this.speedY *= -1;
+      }
+
+      if (this.y > this.canvas.height - 1) {
+        this.y = canvas.height - 6;
+        this.speedY *= -1;
+      }
+
+      var tempXinZeroCoordsCentre = this.x - this.canvasCentreX;
+      var tempYinZeroCoordsCentre = this.y - this.canvasCentreY;
+
+      var distanceFromZeroCoords = Math.sqrt(tempXinZeroCoordsCentre * tempXinZeroCoordsCentre + tempYinZeroCoordsCentre * tempYinZeroCoordsCentre);
+
+      var horizontalEdgeKoef = 1;
+      var centralKoef = this.speedX > 0 ? 2 : 0.2;
+      this.koeficientSize = centralKoef - (distanceFromZeroCoords * (centralKoef - horizontalEdgeKoef)) / this.canvasCentreX;
+
+      this._draw();
+    }
+
+    Bubble.prototype._draw = function() {
+      this.context.save();
+      context.strokeRect(0.5, 0.5, this.canvas.width - 1, this.canvas.height - 1);
+      this.context.restore();
+
+      this.context.save();
+      this.context.fillStyle = this.colour;
+
+      this.context.beginPath();
+      this.context.arc(this.x, this.y, this.radius * this.koeficientSize, 0, 2 * Math.PI, true);
+
+      this.context.fill();
+      this.context.restore();
+    }
+
+    function rand(min, max) {
+      return Math.round(Math.random() * (max - min + 1) + min - 0.5);
+    }
+
+    //---------------------------------------------------
+    var canvas = document.getElementById('canvas');
+    canvas.width = window.innerWidth - 50;
+    canvas.height = window.innerHeight - 50;
+
+    var context = canvas.getContext('2d');
+
+    GAME.appendTask((function(canvas, context) {
+      return function() {
+        // Store the current transformation matrix
+        context.save();
+
+        // Use the identity matrix while clearing the canvas
+        context.clearRect(0, 0, canvas.width - 1, canvas.height - 1);
+
+        // Restore the transform
+        context.restore();
+      }
+    })(canvas, context));
+
+    var arrBalls = [];
+
+    for (var i = 0; i < 75; i++) {
+      var ball = new Bubble(rand(5, 500), rand(5, 400), rand(10, 20), (i + 3) / 2, canvas, context, 'rgb(' + rand(0, 200) + ',' + rand(0, 200) + ',' + rand(0, 200) + ')');
+      arrBalls.push(ball);
+
+      GAME.appendTask(ball.update.bind(ball));
+    }
+
+    document.addEventListener('mousemove', function(event) {
+      for (var i = 0; i < arrBalls.length; i++) {
+        arrBalls[i].calcAngle(event.clientX, event.clientY);
+      }
+    });
+
+    GAME.start();
+  </script>
+</body>
+
+</html>
